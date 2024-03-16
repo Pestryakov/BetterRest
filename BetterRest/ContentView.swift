@@ -28,7 +28,7 @@ struct ContentView: View {
             Form {
                 Section(header: Text("When do you want to wake up?")) {
                     DatePicker("PLease enter a time", selection: $wakeUp, displayedComponents: .hourAndMinute)
-                            .labelsHidden()
+                        .labelsHidden()
                 }
                 
                 Section(header: Text("Desired amount of sleep")) {
@@ -39,43 +39,42 @@ struct ContentView: View {
                     Text("Daily coffee intake")
                         .font(.headline)
                     
-                    Stepper("^[\(coffeeAmount) cup](inflect: true)", value: $coffeeAmount, in: 1...20)
+                    Picker(selection: $coffeeAmount, label: Text("Количество чашек кофе")) {
+                        ForEach(1 ..< 21, id: \.self) { cup in
+                            Text("\(cup) cup\(cup > 1 ? "s" : "")")
+                        }
+                    }
+                    .pickerStyle(MenuPickerStyle())
                 })
+                
+                Section(header: Text("Recomended bedtime")) {
+                    Text(calculateBedtime())
+                        .font(/*@START_MENU_TOKEN@*/.title/*@END_MENU_TOKEN@*/)
+                        .foregroundColor(/*@START_MENU_TOKEN@*/.blue/*@END_MENU_TOKEN@*/)
+                }
             }
             .navigationTitle("BetterRest")
-            .toolbar {
-                Button("Calculate", action: calculateBedtime)
-            }
-            .alert(alertTitle, isPresented: $showingAlert) {
-                Button("Ok"){}
-            } message: {
-                Text(alertMessage)
-            }
         }
     }
     
-    func calculateBedtime() {
-            do {
-                let config = MLModelConfiguration()
-                let model = try BetterRest(configuration: config)
-                
-                let components = Calendar.current.dateComponents([.hour, .minute], from: wakeUp)
-                let hour = (components.hour ?? 0) * 60 * 60
-                let minute = (components.minute ?? 0) * 60
-                
-                let prediction = try model.prediction(wake: Int64(Double(hour + minute)), estimatedSleep: sleepAmount, coffee: Int64(coffeeAmount))
-                
-                let sleepTime = wakeUp - prediction.actualSleep
-                
-                alertTitle = "Your ideal bedtime is..."
-                alertMessage = sleepTime.formatted(date: .omitted, time: .shortened)
-                
-            } catch {
-                alertTitle = "Error"
-                alertMessage = "Sorry, there was a problem caclculating your bedtime"
-            }
-        showingAlert = true
+    func calculateBedtime() -> String {
+        do {
+            let config = MLModelConfiguration()
+            let model = try BetterRest(configuration: config)
+            
+            let components = Calendar.current.dateComponents([.hour, .minute], from: wakeUp)
+            let hour = (components.hour ?? 0) * 60 * 60
+            let minute = (components.minute ?? 0) * 60
+            
+            let prediction = try model.prediction(wake: Int64(Double(hour + minute)), estimatedSleep: sleepAmount, coffee: Int64(coffeeAmount))
+            
+            let sleepTime = wakeUp - prediction.actualSleep
+            
+            return sleepTime.formatted(date: .omitted, time: .shortened)
+        } catch {
+            return "Error calculating bedtime"
         }
+    }
 }
 
 #Preview {
